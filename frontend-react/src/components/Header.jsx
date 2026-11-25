@@ -1,105 +1,114 @@
 import { useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ShoppingBag, ShoppingCart, Package, LogOut, Home } from "lucide-react";
 import { AuthContext } from "./AuthProvider";
 
 const Header = () => {
-	const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
-	const navigate = useNavigate();
+  const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-	const logout = () => {
-		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
-		setIsLoggedIn(false);
-		navigate("/login");
-	};
+  const logout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setIsLoggedIn(false);
+    navigate("/login");
+  };
 
-	return (
-		<nav className="navbar navbar-expand-lg navbar-light bg-success shadow-sm">
-			<div className="container">
-				{/* Brand */}
-				{isLoggedIn ? (
-          <Link className="navbar-brand text-white fw-bold" to="/dashboard">
-					Grocery Delivery
-				</Link>
-        ):(
-          <Link className="navbar-brand text-white fw-bold" to="/">
-					Grocery Delivery
-				</Link>
-        )}
+  const isActive = (path) => (location.pathname === path ? "active" : "");
 
-				{/* Mobile toggle */}
-				<button
-					className="navbar-toggler"
-					type="button"
-					data-bs-toggle="collapse"
-					data-bs-target="#navbarNav"
-					aria-controls="navbarNav"
-					aria-expanded="false"
-					aria-label="Toggle navigation"
-				>
-					<span className="navbar-toggler-icon"></span>
-				</button>
+  return (
+    <nav className="navbar navbar-expand-lg fm-navbar py-2">
+      <div className="container">
+        {/* Brand */}
+        <Link
+          className="navbar-brand d-flex align-items-center gap-2 fw-bold text-dark"
+          to={isLoggedIn ? "/dashboard" : "/"}
+        >
+          <span className="fm-brand-icon">
+            <ShoppingBag size={20} />
+          </span>
+          <span style={{ letterSpacing: "-0.5px", fontSize: "1.25rem" }}>
+            Fresh<span style={{ color: "var(--fm-primary)" }}>Mart</span>
+          </span>
+        </Link>
 
-				{/* Nav links */}
-				<div
-					className="collapse navbar-collapse justify-content-end"
-					id="navbarNav"
-				>
-					<ul className="navbar-nav align-items-center">
-						{isLoggedIn ? (
-							<li className="nav-item me-2">
-								<Link className="nav-link text-white" to="/dashboard">
-									Home
-								</Link>
-							</li>
-						) : (
-							<li className="nav-item me-2">
-								<Link className="nav-link text-white" to="/">
-									Home
-								</Link>
-							</li>
-						)}
+        {/* Mobile toggle */}
+        <button
+          className="navbar-toggler border-0 shadow-none"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
 
-						{isLoggedIn && (
-							<>
-								<li className="nav-item me-2">
-									<Link className="nav-link text-white" to="/cart">
-										Cart
-									</Link>
-								</li>
-								<li className="nav-item me-2">
-									<Link className="nav-link text-white" to="/orders">
-										Orders
-									</Link>
-								</li>
-							</>
-						)}
-						{/* Auth buttons */}
-						{isLoggedIn ? (
-							<li className="nav-item">
-								<button className="btn btn-danger" onClick={logout}>
-									Logout
-								</button>
-							</li>
-						) : (
-							<>
-								<li className="nav-item me-2">
-									<Link className="btn btn-outline-light" to="/login">
-										Login
-									</Link>
-								</li>
-								<li className="nav-item">
-									<Link className="btn btn-light text-success" to="/register">
-										Register
-									</Link>
-								</li>
-							</>
-						)}
-					</ul>
-				</div>
-			</div>
-		</nav>
-	);
+        {/* Nav links */}
+        <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
+          <ul className="navbar-nav align-items-lg-center gap-1 mt-3 mt-lg-0">
+            <li className="nav-item">
+              <Link
+                className={`nav-link fm-nav-link d-flex align-items-center gap-1 ${isActive(
+                  isLoggedIn ? "/dashboard" : "/"
+                )}`}
+                to={isLoggedIn ? "/dashboard" : "/"}
+              >
+                <Home size={16} />
+                <span>{isLoggedIn ? "Shop" : "Home"}</span>
+              </Link>
+            </li>
+
+            {isLoggedIn && (
+              <>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link fm-nav-link d-flex align-items-center gap-1 ${isActive("/cart")}`}
+                    to="/cart"
+                  >
+                    <ShoppingCart size={16} />
+                    <span>Cart</span>
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link fm-nav-link d-flex align-items-center gap-1 ${isActive("/orders")}`}
+                    to="/orders"
+                  >
+                    <Package size={16} />
+                    <span>Orders</span>
+                  </Link>
+                </li>
+              </>
+            )}
+
+            <li className="nav-item ms-lg-2 mt-2 mt-lg-0 d-flex gap-2">
+              {isLoggedIn ? (
+                <button
+                  className="btn btn-outline-danger rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1"
+                  onClick={logout}
+                >
+                  <LogOut size={15} />
+                  <span>Logout</span>
+                </button>
+              ) : (
+                <>
+                  <Link className="btn btn-fm-outline py-2 px-3" to="/login">
+                    Login
+                  </Link>
+                  <Link className="btn btn-fm-primary py-2 px-3" to="/register">
+                    Get Started
+                  </Link>
+                </>
+              )}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  );
 };
 
 export default Header;

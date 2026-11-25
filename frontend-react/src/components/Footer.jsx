@@ -1,94 +1,72 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faFacebook,
-  faInstagram,
-  faTwitter
-} from "@fortawesome/free-brands-svg-icons";
-import { faEnvelope, faPhone } from "@fortawesome/free-solid-svg-icons";
+import { Link } from "react-router-dom";
+import { ShoppingBag, MapPin, Mail, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="footer mt-5">
-  <div className="container py-5">
-    <div className="row">
+    <footer className="fm-footer mt-5 pt-5 pb-4">
+      <div className="container">
+        <div className="row g-4 pb-4 border-bottom border-secondary border-opacity-25">
+          {/* Brand */}
+          <div className="col-lg-4 col-md-6">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <span className="fm-brand-icon">
+                <ShoppingBag size={18} />
+              </span>
+              <span className="fw-bold text-white fs-5">
+                Fresh<span className="text-success">Mart</span>
+              </span>
+            </div>
+            <p className="small text-secondary mb-0" style={{ maxWidth: "300px" }}>
+              Farm-fresh groceries, organic produce, and daily essentials delivered straight to your doorstep in minutes.
+            </p>
+          </div>
 
-      {/* Logo + About */}
-      <div className="col-md-4">
-        <h5 className="fw-bold text-success">FreshMart</h5>
-        <p className="text-muted small">
-          Fresh groceries delivered to your doorstep. Quality products,
-          fast delivery and trusted service.
-        </p>
+          {/* Quick Links */}
+          <div className="col-lg-2 col-md-6">
+            <h6 className="text-white fw-bold mb-3">Quick Links</h6>
+            <ul className="list-unstyled d-flex flex-column gap-2 small">
+              <li><Link to="/dashboard">Shop Now</Link></li>
+              <li><Link to="/cart">My Cart</Link></li>
+              <li><Link to="/orders">Order History</Link></li>
+              <li><Link to="/login">Account Login</Link></li>
+            </ul>
+          </div>
+
+          {/* Highlights */}
+          <div className="col-lg-3 col-md-6">
+            <h6 className="text-white fw-bold mb-3">Why FreshMart</h6>
+            <ul className="list-unstyled d-flex flex-column gap-2 small text-secondary">
+              <li>⚡ 15-Minute Express Delivery</li>
+              <li>🥬 100% Farm-Fresh Guarantee</li>
+              <li>🔐 OTP-Verified Accounts</li>
+              <li>📦 Real-Time Order Tracking</li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div className="col-lg-3 col-md-6">
+            <h6 className="text-white fw-bold mb-3">Contact Us</h6>
+            <ul className="list-unstyled d-flex flex-column gap-2 small text-secondary">
+              <li className="d-flex align-items-center gap-2">
+                <MapPin size={15} className="text-success" /> Maharashtra, India
+              </li>
+              <li className="d-flex align-items-center gap-2">
+                <Mail size={15} className="text-success" /> support@freshmart.app
+              </li>
+              <li className="d-flex align-items-center gap-2">
+                <Phone size={15} className="text-success" /> +91 98765 43210
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="pt-4 d-flex flex-column flex-sm-row justify-content-between align-items-center small text-secondary">
+          <span>© {new Date().getFullYear()} FreshMart Grocery Delivery. All rights reserved.</span>
+          <span className="mt-2 mt-sm-0">Built with React & Django REST Framework</span>
+        </div>
       </div>
-
-      {/* Quick Links */}
-      <div className="col-md-2">
-        <h6 className="fw-semibold">Quick Links</h6>
-        <ul className="footer-links">
-          <li>Home</li>
-          <li>Categories</li>
-          <li>Products</li>
-          <li>Cart</li>
-        </ul>
-      </div>
-
-      {/* Categories */}
-      <div className="col-md-3">
-        <h6 className="fw-semibold">Top Categories</h6>
-        <ul className="footer-links">
-          <li>Vegetables</li>
-          <li>Fruits</li>
-          <li>Dairy</li>
-          <li>Snacks</li>
-        </ul>
-      </div>
-
-      {/* Contact */}
-      <div className="col-md-3">
-        <h6 className="fw-semibold">Contact</h6>
-        <p className="small text-muted mb-1">📍 Maharashtra, India</p>
-        <p className="small text-muted mb-1">📞 +91 9876543210</p>
-        <p className="small text-muted">✉ support@freshmart.com</p>
-      </div>
-
-    </div>
-
-    {/* Bottom */}
-    <hr />
-    <div className="text-center small text-muted">
-      © {new Date().getFullYear()} FreshMart. All rights reserved.
-    </div>
-  </div>
-
-  {/* Styling */}
-  <style>{`
-    .footer {
-      background: #f8faf9;
-      border-top: 1px solid #e6e6e6;
-    }
-
-    .footer-links {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .footer-links li {
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .footer-links li:hover {
-      color: #198754;
-      padding-left: 4px;
-    }
-  `}</style>
-</footer>
-
+    </footer>
   );
 };
 

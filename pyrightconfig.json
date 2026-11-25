@@ -1,0 +1,15 @@
+{
+  "include": [
+    "backend"
+  ],
+  "exclude": [
+    "backend/env",
+    "backend/staticfiles",
+    "frontend-react"
+  ],
+  "extraPaths": [
+    "backend"
+  ],
+  "venvPath": "backend",
+  "venv": "env"
+}

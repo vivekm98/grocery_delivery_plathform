@@ -1,159 +1,124 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Package, MapPin, Calendar } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // Fetch Orders
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        console.log("Fetching orders...");
-
         const res = await axiosInstance.get("/orders/");
-
-        console.log("Orders Success Response:", res.data);
-
         setOrders(res.data || []);
       } catch (error) {
         console.error("Order Fetch Error:", error);
-
-        if (error.response) {
-          console.error("Status:", error.response.status);
-          console.error("Error Data:", error.response.data);
-        }
       } finally {
         setLoading(false);
       }
     };
-
     fetchOrders();
   }, []);
 
-  // Badge Styling
   const getStatusBadge = (status) => {
     switch (status) {
       case "Pending":
-        return "bg-warning text-dark";
+        return "bg-warning bg-opacity-25 text-dark";
       case "Processing":
-        return "bg-info text-dark";
+        return "bg-info bg-opacity-25 text-dark";
       case "Shipped":
-        return "bg-primary";
+        return "bg-primary bg-opacity-10 text-primary";
       case "Delivered":
-        return "bg-success";
+        return "bg-success bg-opacity-10 text-success";
       case "Cancelled":
-        return "bg-danger";
+        return "bg-danger bg-opacity-10 text-danger";
       default:
-        return "bg-secondary";
+        return "bg-secondary bg-opacity-10 text-secondary";
     }
   };
 
-  // Loading UI
   if (loading) {
     return (
-      <div className="text-center mt-5">
+      <div className="container py-5 text-center">
         <div className="spinner-border text-success"></div>
-        <p className="mt-2">Loading your orders...</p>
+        <p className="mt-2 text-muted">Loading your orders...</p>
       </div>
     );
   }
 
   return (
-    <div className="container my-5" style={{ maxWidth: "900px" }}>
-      <h3 className="fw-bold mb-4 text-center">📦 Your Orders</h3>
+    <div className="container py-5" style={{ maxWidth: "900px" }}>
+      <h3 className="fw-bold mb-4">📦 Your Order History</h3>
 
       {orders.length === 0 ? (
-        <div className="card shadow-sm border-0 text-center p-4">
-          <h5>No orders found</h5>
-          <p className="text-muted mb-0">
-            Looks like you haven't placed any order yet.
+        <div className="fm-card p-5 text-center">
+          <Package size={48} className="text-muted mb-3" />
+          <h5 className="fw-bold">No orders yet</h5>
+          <p className="text-muted small mb-4">
+            Looks like you haven&apos;t placed an order yet.
           </p>
+          <button
+            className="btn btn-fm-primary"
+            onClick={() => navigate("/dashboard")}
+          >
+            Start Shopping
+          </button>
         </div>
       ) : (
-        orders.map((order) => {
-          const items = order.items || [];
+        <div className="d-flex flex-column gap-4">
+          {orders.map((order) => {
+            const items = order.items || [];
+            const orderTotal = items.reduce(
+              (sum, item) => sum + Number(item.price || 0),
+              0
+            );
 
-          const orderTotal = items.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0
-          );
+            return (
+              <div key={order.id} className="fm-card p-4">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-3 mb-3 border-bottom">
+                  <div>
+                    <h6 className="fw-bold mb-1">Order #{order.id}</h6>
+                    <span className="text-muted small d-inline-flex align-items-center gap-1">
+                      <Calendar size={14} />
+                      {new Date(order.created_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
 
-          return (
-            <div
-              key={order.id}
-              className="card shadow-sm border-0 rounded-4 mb-4"
-            >
-              {/* Header */}
-              <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="mb-0 fw-semibold">Order #{order.id}</h6>
-                  <small className="text-muted">
-                    {new Date(order.created_at).toLocaleString()}
-                  </small>
+                  <span className={`badge rounded-pill px-3 py-2 fw-semibold ${getStatusBadge(order.status_name)}`}>
+                    {order.status_name || "Pending"}
+                  </span>
                 </div>
 
-                <span
-                  className={`badge px-3 py-2 ${getStatusBadge(
-                    order.status_name
-                  )}`}
-                >
-                  {order.status_name}
-                </span>
-              </div>
-
-              {/* Body */}
-              <div className="card-body">
-                {/* Delivery Info */}
-                <div className="mb-3">
-                  <p className="mb-1">
-                    <strong>Name:</strong> {order.name}
-                  </p>
-                  <p className="mb-1">
-                    <strong>Phone:</strong> {order.phone}
-                  </p>
-                  <p className="mb-0 text-muted">
-                    {order.address}, {order.city}, {order.state},{" "}
-                    {order.country}
-                  </p>
-                </div>
-
-                <hr />
-
-                {/* Items */}
-                <ul className="list-group list-group-flush">
-                  {items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="list-group-item d-flex justify-content-between align-items-center px-0"
-                    >
-                      <div>
-                        <h6 className="mb-0">{item.product_name}</h6>
-                        <small className="text-muted">
-                          ₹{item.price} × {item.quantity}
-                        </small>
-                      </div>
-
-                      <strong className="text-success">
-                        ₹{item.price * item.quantity}
-                      </strong>
-                    </li>
+                <div className="d-flex flex-column gap-2 mb-3">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="d-flex justify-content-between small">
+                      <span>
+                        Product #{item.product} <span className="text-muted">x {item.quantity}</span>
+                      </span>
+                      <span className="fw-semibold">₹{Number(item.price || 0).toFixed(2)}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
 
-                <hr />
-
-                {/* Total */}
-                <div className="d-flex justify-content-end">
-                  <h5 className="fw-bold">
-                    Total:{" "}
-                    <span className="text-success">₹{orderTotal}</span>
-                  </h5>
+                <div className="d-flex flex-wrap justify-content-between align-items-center pt-3 border-top">
+                  <span className="text-muted small d-inline-flex align-items-center gap-1">
+                    <MapPin size={14} className="text-success" />
+                    {order.address}, {order.city}
+                  </span>
+                  <div className="fw-bold fs-5 text-success">
+                    Total: ₹{orderTotal.toFixed(2)}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
     </div>
   );

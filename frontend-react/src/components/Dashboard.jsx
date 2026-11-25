@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "./axiosInstance";
 import { useNavigate } from "react-router-dom";
+import { Search, Plus, Sparkles } from "lucide-react";
 import Footer from "./Footer";
+import { useToast } from "./ToastContext";
 
 const Dashboard = () => {
   const [categories, setCategories] = useState([]);
@@ -11,13 +13,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
-  /* ================= FETCH DATA ================= */
   useEffect(() => {
     Promise.all([
       axiosInstance.get("/categories/"),
-      axiosInstance.get("/products/?limit=8"),
-      axiosInstance.get("/posters/")
+      axiosInstance.get("/products/?limit=12"),
+      axiosInstance.get("/posters/"),
     ])
       .then(([catRes, prodRes, posterRes]) => {
         setCategories(catRes.data || []);
@@ -25,16 +27,19 @@ const Dashboard = () => {
         setPosters(posterRes.data || []);
       })
       .catch(() => {
-        console.log("Dashboard fetch error");
+        showToast("Failed to load store items.", "error");
       })
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [showToast]);
 
-  /* ================= SEARCH ================= */
-  const filteredCategories = categories.filter(cat =>
+  const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleSearchSubmit = (e) => {
@@ -44,295 +49,202 @@ const Dashboard = () => {
     }
   };
 
-  /* ================= ADD TO CART ================= */
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async (e, productId, productName) => {
+    e.stopPropagation();
     try {
       await axiosInstance.post("/cart/add/", {
         product_id: productId,
-        quantity: 1
+        quantity: 1,
       });
-
-      alert("Product added to cart ✅");
+      showToast(`${productName} added to cart!`);
     } catch {
-      alert("Please login first");
+      showToast("Please login first to add items.", "error");
       navigate("/login");
     }
   };
 
-  /* ================= LOADING ================= */
-  if (loading)
-    return <p className="text-center mt-5">Loading...</p>;
+  if (loading) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-success" role="status"></div>
+        <p className="text-muted mt-3 fw-medium">Loading fresh groceries...</p>
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* 🎞 CAROUSEL */}
-{posters.length > 0 && (
-  <div
-    id="heroCarousel"
-    className="carousel slide"
-    data-bs-ride="carousel"
-    data-bs-interval="3000"
-  >
+      <div className="container py-4">
+        {/* TOP SEARCH + WELCOME BAR */}
+        <div className="row align-items-center g-3 mb-4">
+          <div className="col-lg-6">
+            <div className="fm-pill-badge mb-2">
+              <Sparkles size={14} />
+              <span>FreshMart Storefront</span>
+            </div>
+            <h2 className="fw-bold mb-0">What are you craving today?</h2>
+          </div>
 
-    {/* Indicators */}
-    <div className="carousel-indicators">
-      {posters.map((_, index) => (
-        <button
-          key={index}
-          type="button"
-          data-bs-target="#heroCarousel"
-          data-bs-slide-to={index}
-          className={index === 0 ? "active" : ""}
-        />
-      ))}
-    </div>
-
-    {/* Slides */}
-    <div className="carousel-inner">
-      {posters.map((p, i) => (
-        <div
-          key={p.id}
-          className={`carousel-item ${i === 0 ? "active" : ""}`}
-        >
-          <img
-            src={p.image}
-            className="d-block w-100 hero-img"
-            alt="Banner"
-          />
+          <div className="col-lg-6">
+            <form onSubmit={handleSearchSubmit} className="fm-search-wrap d-flex align-items-center gap-2">
+              <Search size={18} className="text-muted flex-shrink-0" />
+              <input
+                type="text"
+                placeholder="Search categories or fresh products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <button type="submit" className="btn btn-fm-primary rounded-pill px-4 py-2">
+                Search
+              </button>
+            </form>
+          </div>
         </div>
-      ))}
-    </div>
 
-    {/* Prev Button */}
-    <button
-      className="carousel-control-prev"
-      type="button"
-      data-bs-target="#heroCarousel"
-      data-bs-slide="prev"
-    >
-      <span className="carousel-control-prev-icon" />
-    </button>
-
-    {/* Next Button */}
-    <button
-      className="carousel-control-next"
-      type="button"
-      data-bs-target="#heroCarousel"
-      data-bs-slide="next"
-    >
-      <span className="carousel-control-next-icon" />
-    </button>
-
-  </div>
-)}
-
-      <div className="container dashboard">
-
-        {/* 🔍 SEARCH */}
-        <form onSubmit={handleSearchSubmit} className="search-bar">
-          <input
-            type="text"
-            className="form-control form-control-lg"
-            placeholder="Search category (Fruits, Dairy...)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          {search && filteredCategories.length > 0 && (
-            <ul className="search-suggestions">
-              {filteredCategories.slice(0, 5).map(cat => (
-                <li
-                  key={cat.id}
-                  onClick={() => navigate(`/category/${cat.id}`)}
-                >
-                  {cat.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </form>
-
-        {/* 📂 CATEGORIES */}
-        <h4 className="section-title">Categories</h4>
-
-        {categories.length === 0 ? (
-          <p>No categories available</p>
-        ) : (
-          <div className="grid">
-            {categories.map(cat => (
-              <div
-                key={cat.id}
-                className="category-box"
-                onClick={() => navigate(`/category/${cat.id}`)}
-              >
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  onError={(e) => (e.target.src = "/placeholder.png")}
+        {/* HERO POSTER CAROUSEL */}
+        {posters.length > 0 && (
+          <div
+            id="heroCarousel"
+            className="carousel slide mb-5 rounded-4 overflow-hidden shadow-sm"
+            data-bs-ride="carousel"
+            data-bs-interval="3500"
+          >
+            <div className="carousel-indicators">
+              {posters.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  data-bs-target="#heroCarousel"
+                  data-bs-slide-to={index}
+                  className={index === 0 ? "active" : ""}
                 />
-                <div className="box-body">
-                  <h6>{cat.name}</h6>
-                  <span>Explore →</span>
+              ))}
+            </div>
+            <div className="carousel-inner">
+              {posters.map((poster, index) => (
+                <div key={poster.id} className={`carousel-item ${index === 0 ? "active" : ""}`}>
+                  <img
+                    src={poster.image}
+                    alt="Promotional banner"
+                    className="d-block w-100"
+                    style={{ maxHeight: "340px", objectFit: "cover" }}
+                  />
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
-        {/* 📦 PRODUCTS */}
-        <h4 className="section-title">Popular Products</h4>
+        {/* CATEGORIES */}
+        <section className="mb-5">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="fw-bold mb-0">Shop by Category</h4>
+            <span className="text-muted small">{filteredCategories.length} categories</span>
+          </div>
 
-        {products.length === 0 ? (
-          <p>No products available</p>
-        ) : (
-          <div className="grid">
-            {products.map(product => (
-              <div key={product.id} className="product-box">
+          {filteredCategories.length === 0 ? (
+            <div className="fm-card p-4 text-center text-muted">
+              No categories available yet.
+            </div>
+          ) : (
+            <div className="row g-3">
+              {filteredCategories.map((cat) => (
+                <div key={cat.id} className="col-6 col-sm-4 col-md-3 col-lg-2">
+                  <div
+                    className="fm-card fm-card-hover p-3 text-center h-100"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/category/${cat.id}`)}
+                  >
+                    <div
+                      className="rounded-circle overflow-hidden mx-auto mb-2 bg-light d-flex align-items-center justify-content-center"
+                      style={{ width: 84, height: 84 }}
+                    >
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="w-100 h-100"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </div>
+                    <h6 className="fw-bold mb-0 small text-truncate">{cat.name}</h6>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  onError={(e) => (e.target.src = "/placeholder.png")}
-                />
+        {/* PRODUCTS */}
+        <section className="mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="fw-bold mb-0">Popular Groceries</h4>
+            <span className="text-muted small">{filteredProducts.length} items</span>
+          </div>
 
-                <div className="box-body center">
-                  <h6
+          {filteredProducts.length === 0 ? (
+            <div className="fm-card p-5 text-center text-muted">
+              No products found matching your search.
+            </div>
+          ) : (
+            <div className="row g-3">
+              {filteredProducts.map((product) => (
+                <div key={product.id} className="col-6 col-md-4 col-lg-3">
+                  <div
+                    className="fm-card fm-card-hover h-100 d-flex flex-column overflow-hidden"
                     style={{ cursor: "pointer" }}
                     onClick={() => navigate(`/product/${product.id}`)}
                   >
-                    {product.name}
-                  </h6>
+                    <div className="bg-light position-relative p-3 text-center" style={{ height: "190px" }}>
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="h-100 w-100"
+                          style={{ objectFit: "contain" }}
+                        />
+                      ) : (
+                        <div className="h-100 d-flex align-items-center justify-content-center text-muted small">
+                          No Image
+                        </div>
+                      )}
+                      {product.stock === 0 ? (
+                        <span className="badge bg-danger position-absolute top-0 end-0 m-2 rounded-pill">
+                          Out of Stock
+                        </span>
+                      ) : product.stock <= 5 ? (
+                        <span className="badge bg-warning text-dark position-absolute top-0 end-0 m-2 rounded-pill">
+                          Only {product.stock} left
+                        </span>
+                      ) : null}
+                    </div>
 
-                  <p>₹{product.price}</p>
+                    <div className="p-3 d-flex flex-column flex-grow-1">
+                      <span className="text-muted small mb-1">{product.category_name}</span>
+                      <h6 className="fw-bold text-dark mb-2 text-truncate">{product.name}</h6>
 
-                  <button
-                    disabled={product.stock === 0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToCart(product.id);
-                    }}
-                  >
-                    {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                  </button>
-
+                      <div className="mt-auto d-flex justify-content-between align-items-center pt-2">
+                        <div>
+                          <span className="fw-bold fs-5 text-success">₹{product.price}</span>
+                          <span className="text-muted small"> / {product.unit_name}</span>
+                        </div>
+                        <button
+                          className="btn btn-fm-primary btn-sm px-3 py-2 d-flex align-items-center gap-1"
+                          disabled={product.stock === 0}
+                          onClick={(e) => handleAddToCart(e, product.id, product.name)}
+                        >
+                          <Plus size={15} />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 💅 CSS */}
-        <style>{`
-          .hero-img {
-            height: 420px;
-            object-fit: cover;
-          }
-
-          .dashboard {
-            padding-bottom: 40px;
-          }
-
-          .search-bar {
-            position: sticky;
-            top: 0;
-            background: #fff;
-            padding: 20px 0;
-            z-index: 20;
-          }
-
-          .search-suggestions {
-            list-style: none;
-            padding: 0;
-            margin: 6px 0 0;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-            position: absolute;
-            width: 100%;
-            max-width: 600px;
-            z-index: 30;
-          }
-
-          .search-suggestions li {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-bottom: 1px solid #eee;
-          }
-
-          .search-suggestions li:hover {
-            background: #f1f5ff;
-          }
-
-          .section-title {
-            margin: 32px 0 16px;
-            font-weight: 600;
-          }
-
-          .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-          }
-
-          .category-box, .product-box {
-            background: #fff;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-            transition: transform 0.25s ease;
-            cursor: pointer;
-          }
-
-          .category-box:hover, .product-box:hover {
-            transform: translateY(-6px);
-          }
-
-          .category-box img, .product-box img {
-            height: 150px;
-            width: 100%;
-            object-fit: cover;
-          }
-
-          .box-body {
-            padding: 14px;
-          }
-
-          .box-body h6 {
-            margin: 0;
-            font-weight: 600;
-          }
-
-          .box-body span {
-            font-size: 13px;
-            color: #0d6efd;
-          }
-
-          .center {
-            text-align: center;
-          }
-
-          .center p {
-            margin: 6px 0;
-            font-weight: 600;
-            color: #198754;
-          }
-
-          .center button {
-            border: none;
-            background: #0d6efd;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 14px;
-          }
-
-          .center button:disabled {
-            background: gray;
-            cursor: not-allowed;
-          }
-        `}</style>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
+
       <Footer />
     </>
   );

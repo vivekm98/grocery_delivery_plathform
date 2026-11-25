@@ -1,34 +1,36 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "./axiosInstance";
 import { useParams, useNavigate } from "react-router-dom";
+import { Search, Plus, ArrowLeft } from "lucide-react";
 import Footer from "./Footer";
+import { useToast } from "./ToastContext";
 
-const ProductsCategory = () => {
-  const { id } = useParams(); // category id
+const CategoryProducts = () => {
+  const { id } = useParams();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const BASE_URL = "http://127.0.0.1:8000/api";
+  const { showToast } = useToast();
 
-  // Fetch products for category
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axiosInstance.get(`${BASE_URL}/products/?category=${id}`);
-        setProducts(res.data);
-        setFilteredProducts(res.data);
+        const res = await axiosInstance.get(`/products/?category=${id}`);
+        const list = res.data.results || res.data || [];
+        setProducts(list);
+        setFilteredProducts(list);
       } catch (err) {
         console.error("Error fetching products:", err);
+        showToast("Failed to load category products.", "error");
       } finally {
         setLoading(false);
       }
     };
     fetchProducts();
-  }, [id]);
+  }, [id, showToast]);
 
-  // Handle search input
   useEffect(() => {
     if (search.trim() === "") {
       setFilteredProducts(products);
@@ -41,135 +43,111 @@ const ProductsCategory = () => {
     }
   }, [search, products]);
 
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async (e, productId, productName) => {
+    e.stopPropagation();
     try {
       await axiosInstance.post("/cart/add/", {
         product_id: productId,
         quantity: 1,
       });
-      alert("Product added to cart ✅");
-    } catch (err) {
-      alert("Please login to add to cart");
+      showToast(`${productName} added to cart!`);
+    } catch {
+      showToast("Please login to add items.", "error");
+      navigate("/login");
     }
   };
 
   return (
     <>
-    <div className="container my-5">
-      <h3 className="mb-4">Category Products</h3>
+      <div className="container py-4">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+          <div className="d-flex align-items-center gap-3">
+            <button
+              className="btn btn-light border rounded-circle p-2"
+              onClick={() => navigate("/dashboard")}
+              title="Back to Shop"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h3 className="fw-bold mb-0">
+                {products[0]?.category_name || "Category Products"}
+              </h3>
+              <span className="text-muted small">{filteredProducts.length} items available</span>
+            </div>
+          </div>
 
-      {/* 🔍 Search Bar */}
-      <div className="mb-4 position-relative">
-        <input
-          type="text"
-          className="form-control form-control-lg"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {search && filteredProducts.length > 0 && (
-          <ul className="search-suggestions">
-            {filteredProducts.slice(0, 5).map((p) => (
-              <li key={p.id} onClick={() => navigate(`/product/${p.id}`)}>
-                {p.name}
-              </li>
+          <div className="fm-search-wrap d-flex align-items-center gap-2" style={{ minWidth: "280px" }}>
+            <Search size={18} className="text-muted" />
+            <input
+              type="text"
+              placeholder="Search in this category..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center my-5 py-5">
+            <div className="spinner-border text-success"></div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="fm-card p-5 text-center text-muted">
+            No products found in this category.
+          </div>
+        ) : (
+          <div className="row g-3">
+            {filteredProducts.map((product) => (
+              <div key={product.id} className="col-6 col-md-4 col-lg-3">
+                <div
+                  className="fm-card fm-card-hover h-100 d-flex flex-column overflow-hidden"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => navigate(`/product/${product.id}`)}
+                >
+                  <div className="bg-light p-3 text-center position-relative" style={{ height: "190px" }}>
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-100 w-100"
+                      style={{ objectFit: "contain" }}
+                    />
+                    {product.stock === 0 && (
+                      <span className="badge bg-danger position-absolute top-0 end-0 m-2 rounded-pill">
+                        Out of Stock
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-3 d-flex flex-column flex-grow-1">
+                    <h6 className="fw-bold mb-1 text-truncate">{product.name}</h6>
+                    <p className="text-muted small mb-3 text-truncate">{product.description}</p>
+
+                    <div className="mt-auto d-flex justify-content-between align-items-center">
+                      <div>
+                        <span className="fw-bold fs-5 text-success">₹{product.price}</span>
+                        <span className="text-muted small"> / {product.unit_name}</span>
+                      </div>
+                      <button
+                        className="btn btn-fm-primary btn-sm px-3 py-2 d-flex align-items-center gap-1"
+                        disabled={product.stock === 0}
+                        onClick={(e) => handleAddToCart(e, product.id, product.name)}
+                      >
+                        <Plus size={15} />
+                        <span>Add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
 
-      {loading ? (
-        <div className="text-center my-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="alert alert-warning">No products found</div>
-      ) : (
-        <div className="row">
-          {filteredProducts.map((product) => (
-            <div key={product.id} className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-              <div className="card product-card h-100 shadow-sm">
-                <img
-                  src={product.image}
-                  className="card-img-top"
-                  alt={product.name}
-                  style={{ height: "180px", objectFit: "cover" }}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                />
-                <div className="card-body d-flex flex-column justify-content-between">
-                  <div>
-                    <h6 className="card-title">{product.name}</h6>
-                    <p className="fw-bold text-success">₹{product.price}</p>
-                    <p className="text-muted product-description">
-                      {product.description
-                        ? product.description.length > 60
-                          ? product.description.substring(0, 60) + "..."
-                          : product.description
-                        : "No description available."}
-                    </p>
-                  </div>
-                  <button
-                    className="btn btn-primary mt-2"
-                    onClick={() => handleAddToCart(product.id)}
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* CSS */}
-      <style>{`
-        .product-card {
-          border-radius: 12px;
-          transition: transform 0.3s, box-shadow 0.3s;
-          cursor: pointer;
-        }
-        .product-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 12px 28px rgba(0,0,0,0.15);
-        }
-        .product-description {
-          font-size: 14px;
-          margin: 6px 0;
-          color: #555;
-        }
-        .btn-primary {
-          border-radius: 20px;
-          transition: background 0.3s;
-        }
-        .btn-primary:hover {
-          background: #0b5ed7;
-        }
-        .search-suggestions {
-          list-style: none;
-          padding: 0;
-          margin: 4px 0 0;
-          background: #fff;
-          border-radius: 10px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-          position: absolute;
-          width: 100%;
-          z-index: 100;
-        }
-        .search-suggestions li {
-          padding: 10px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        }
-        .search-suggestions li:hover {
-          background: #f1f5ff;
-        }
-      `}</style>
-      
-    </div>
-    <Footer />
+      <Footer />
     </>
-    
   );
 };
 
-export default ProductsCategory;
+export default CategoryProducts;

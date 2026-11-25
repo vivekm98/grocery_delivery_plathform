@@ -1,133 +1,155 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Minus, Plus, ShoppingCart } from "lucide-react";
 import axiosInstance from "./axiosInstance";
+import { useToast } from "./ToastContext";
 
 const ProductDetail = () => {
-	const { id } = useParams();
-	const [product, setProduct] = useState(null);
-	const [quantity, setQuantity] = useState(1);
-	const [loading, setLoading] = useState(true);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
 
-	useEffect(() => {
-		fetchProduct();
-	}, [id]);
+  const [product, setProduct] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(true);
 
-	const fetchProduct = async () => {
-		try {
-			const res = await axiosInstance.get(`/products/${id}/`);
-			setProduct(res.data);
-			setQuantity(1);
-		} catch (err) {
-			console.error("Product fetch error", err);
-		} finally {
-			setLoading(false);
-		}
-	};
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const res = await axiosInstance.get(`/products/${id}/`);
+        setProduct(res.data);
+        setQuantity(1);
+      } catch (err) {
+        console.error("Product fetch error", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
 
-	const handleQuantityChange = (value) => {
-		if (value < 1) return;
-		if (value > product.stock) return;
-		setQuantity(value);
-	};
+  const handleQuantityChange = (value) => {
+    if (value < 1 || (product && value > product.stock)) return;
+    setQuantity(value);
+  };
 
-	const addToCart = async () => {
-		if (quantity > product.stock) {
-			alert("Quantity exceeds available stock");
-			return;
-		}
+  const addToCart = async () => {
+    if (quantity > product.stock) {
+      showToast("Quantity exceeds available stock.", "error");
+      return;
+    }
 
-		try {
-			await axiosInstance.post("/cart/add/", {
-				product_id: product.id,
-				quantity,
-			});
-			alert("Added to cart ✅");
-		} catch (error) {
-			alert("Please login first");
-		}
-	};
+    try {
+      await axiosInstance.post("/cart/add/", {
+        product_id: product.id,
+        quantity,
+      });
+      showToast(`Added ${quantity} x ${product.name} to cart!`);
+    } catch {
+      showToast("Please login first.", "error");
+      navigate("/login");
+    }
+  };
 
-	if (loading) return <p className="text-center mt-5">Loading...</p>;
-	if (!product) return <p className="text-center mt-5">Product not found</p>;
+  if (loading) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-success"></div>
+      </div>
+    );
+  }
 
-	const stockStatus =
-		product.stock === 0
-			? "Out of Stock"
-			: product.stock <= 5
-				? "Low Stock"
-				: "In Stock";
+  if (!product) {
+    return (
+      <div className="container py-5 text-center">
+        <h5>Product not found</h5>
+      </div>
+    );
+  }
 
-	const stockClass =
-		product.stock === 0
-			? "badge bg-danger"
-			: product.stock <= 5
-				? "badge bg-warning text-dark"
-				: "badge bg-success";
+  const stockStatus =
+    product.stock === 0 ? "Out of Stock" : product.stock <= 5 ? `Only ${product.stock} Left` : "In Stock";
 
-	return (
-		<div className="container my-5">
-			<div className="row g-4">
-				{/* IMAGE */}
-				<div className="col-md-5 text-center">
-					<img
-						src={product.image}
-						alt={product.name}
-						className="img-fluid rounded shadow-sm"
-						style={{ maxHeight: "380px", objectFit: "contain" }}
-					/>
-				</div>
+  const stockClass =
+    product.stock === 0
+      ? "bg-danger bg-opacity-10 text-danger"
+      : product.stock <= 5
+      ? "bg-warning bg-opacity-25 text-dark"
+      : "bg-success bg-opacity-10 text-success";
 
-				{/* DETAILS */}
-				<div className="col-md-7">
-					<h3 className="fw-bold">{product.name}</h3>
-					<p className="text-muted mb-1">{product.category_name}</p>
+  return (
+    <div className="container py-5" style={{ maxWidth: "960px" }}>
+      <button
+        className="btn btn-light border rounded-pill px-3 py-1 mb-4 d-inline-flex align-items-center gap-2 small fw-semibold"
+        onClick={() => navigate(-1)}
+      >
+        <ArrowLeft size={16} />
+        <span>Back</span>
+      </button>
 
-					<h4 className="text-success mb-2">₹{product.price}/{product.unit_name}</h4>
+      <div className="fm-card p-4 p-lg-5">
+        <div className="row g-4 align-items-center">
+          <div className="col-md-5 text-center bg-light rounded-4 p-4">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="img-fluid"
+              style={{ maxHeight: "340px", objectFit: "contain" }}
+            />
+          </div>
 
-					<span className={stockClass}>{stockStatus}</span>
+          <div className="col-md-7">
+            <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 mb-2">
+              {product.category_name}
+            </span>
+            <h2 className="fw-bold mb-2">{product.name}</h2>
 
-					{/* DESCRIPTION */}
-					<div className="mt-4">
-						<h6 className="fw-semibold">Description</h6>
-						<p className="text-secondary">
-							{product.description || "No description available."}
-						</p>
-					</div>
+            <div className="d-flex align-items-center gap-3 mb-3">
+              <h3 className="fw-bold text-success mb-0">
+                ₹{product.price}
+                <span className="fs-6 text-muted fw-normal"> / {product.unit_name}</span>
+              </h3>
+              <span className={`badge rounded-pill px-3 py-2 ${stockClass}`}>{stockStatus}</span>
+            </div>
 
-					{/* STOCK INFO */}
-					<p className="mt-2">
-						<strong>Available Stock:</strong> {product.stock}{" "}
-						{product.unit_name}
-					</p>
+            <p className="text-muted mb-4">
+              {product.description || "Freshly sourced quality grocery item delivered to your doorstep."}
+            </p>
 
-					{/* QUANTITY */}
-					<div className="d-flex align-items-center gap-3 my-3">
-						<label className="fw-semibold">Quantity</label>
-						<input
-							type="number"
-							min="1"
-							max={product.stock}
-							value={quantity}
-							onChange={(e) => handleQuantityChange(Number(e.target.value))}
-							className="form-control"
-							style={{ width: "90px" }}
-							disabled={product.stock === 0}
-						/>
-						<span className="fw-semibold text-muted">{product.unit_name}</span>
-					</div>
+            {/* QUANTITY & ADD TO CART */}
+            <div className="d-flex flex-wrap align-items-center gap-3">
+              <div className="d-inline-flex align-items-center border rounded-pill px-2 py-1 bg-light">
+                <button
+                  className="btn btn-sm rounded-circle"
+                  onClick={() => handleQuantityChange(quantity - 1)}
+                  disabled={quantity <= 1}
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="px-3 fw-bold">{quantity}</span>
+                <button
+                  className="btn btn-sm rounded-circle"
+                  onClick={() => handleQuantityChange(quantity + 1)}
+                  disabled={quantity >= product.stock}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
 
-					{/* ADD TO CART */}
-					<button
-						className="btn btn-primary btn-lg mt-2"
-						onClick={addToCart}
-						disabled={product.stock === 0 || quantity > product.stock}
-					>
-						{product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-					</button>
-				</div>
-			</div>
-		</div>
-	);
+              <button
+                className="btn btn-fm-primary px-4 py-2 d-inline-flex align-items-center gap-2"
+                disabled={product.stock === 0}
+                onClick={addToCart}
+              >
+                <ShoppingCart size={18} />
+                <span>Add to Cart — ₹{(product.price * quantity).toFixed(2)}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ProductDetail;

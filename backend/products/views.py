@@ -19,7 +19,11 @@ class CategoryListView(generics.ListCreateAPIView):
 class CategoryRetrieveView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdminUser()]
 
 
 class Posterview(generics.ListCreateAPIView):

@@ -7,6 +7,10 @@ class OrderStatus(models.Model):
     def __str__(self):
         return self.status
 
+def get_default_order_status():
+    status_obj, _ = OrderStatus.objects.get_or_create(id=3, defaults={'status': 'Pending'})
+    return status_obj.id
+
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
     name = models.CharField(max_length=100,null=True,blank=True)
@@ -15,7 +19,7 @@ class Order(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     country = models.CharField(max_length=100)
-    status = models.ForeignKey(OrderStatus, on_delete=models.CASCADE,default=3)
+    status = models.ForeignKey(OrderStatus, on_delete=models.CASCADE, default=get_default_order_status)
     
 
     created_at = models.DateTimeField(auto_now_add=True)

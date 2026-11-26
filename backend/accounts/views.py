@@ -1,19 +1,24 @@
+from datetime import timedelta
 import secrets
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
+from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import EmailOTP
 from .serializers import (
     EmailOrUsernameTokenObtainPairSerializer,
+    LogoutSerializer,
     ResetPasswordWithOTPSerializer,
     SendOTPSerializer,
+    UserProfileSerializer,
     UserSerializer,
     VerifyOTPSerializer,
 )
@@ -29,8 +34,38 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenObtainPairSerializer
 
 
+class LogoutView(APIView):
+    """Blacklist the refresh token to securely log out the user."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = LogoutSerializer
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            token = RefreshToken(serializer.validated_data["refresh"])
+            token.blacklist()
+        except TokenError:
+            return Response(
+                {"error": "Invalid or expired refresh token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update the authenticated user's profile details."""
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
 class SendOTPView(APIView):
-    """Generate and email a 6-digit OTP valid for 5 minutes."""
+    """Generate and email a 6-digit OTP valid for 5 minutes (with 60s cooldown)."""
 
     permission_classes = [AllowAny]
     serializer_class = SendOTPSerializer
@@ -51,6 +86,13 @@ class SendOTPView(APIView):
             return Response(
                 {"email": ["No account found with this email."]},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        latest_otp = EmailOTP.objects.filter(email=email).order_by("-created_at").first()
+        if latest_otp and timezone.now() < latest_otp.created_at + timedelta(seconds=60):
+            return Response(
+                {"error": "Please wait 60 seconds before requesting another OTP."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
         # Invalidate previous unused OTPs for this email

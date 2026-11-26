@@ -1,3 +1,4 @@
+import secrets
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -24,6 +25,8 @@ def verify_and_get_otp(email: str, otp_code: str) -> EmailOTP:
 
 
 class UserSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(write_only=True, required=False, allow_blank=True, default="")
+    username = serializers.CharField(required=False, allow_blank=True)
     first_name = serializers.CharField(required=False, allow_blank=True, default="")
     last_name = serializers.CharField(required=False, allow_blank=True, default="")
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True, default="")
@@ -33,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'phone', 'email', 'password', 'otp']
+        fields = ['username', 'full_name', 'first_name', 'last_name', 'phone', 'email', 'password', 'otp']
 
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value).exists():
@@ -48,8 +51,21 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("otp", None)
+        full_name = validated_data.pop("full_name", "").strip()
         phone = validated_data.pop("phone", "")
         otp_record = validated_data.pop("_otp_record", None)
+
+        if full_name and not validated_data.get("first_name"):
+            parts = full_name.split(None, 1)
+            validated_data["first_name"] = parts[0]
+            validated_data["last_name"] = parts[1] if len(parts) > 1 else ""
+
+        if not validated_data.get("username"):
+            base = validated_data["email"].split("@")[0][:20]
+            username = base
+            while User.objects.filter(username=username).exists():
+                username = f"{base}_{secrets.randbelow(10000):04d}"
+            validated_data["username"] = username
 
         user = User.objects.create_user(**validated_data)
         UserProfile.objects.create(user=user, phone=phone)
@@ -117,3 +133,29 @@ class ResetPasswordWithOTPSerializer(serializers.Serializer):
         otp_record.is_used = True
         otp_record.save()
         return user
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(source="profile.phone", required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "first_name", "last_name", "phone"]
+        read_only_fields = ["id", "username", "email"]
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", {})
+        instance.first_name = validated_data.get("first_name", instance.first_name)
+        instance.last_name = validated_data.get("last_name", instance.last_name)
+        instance.save()
+
+        profile, _ = UserProfile.objects.get_or_create(user=instance)
+        if "phone" in profile_data:
+            profile.phone = profile_data["phone"]
+            profile.save()
+        return instance
+

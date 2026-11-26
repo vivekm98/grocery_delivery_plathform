@@ -65,14 +65,11 @@ class GroceryPlatformAPITests(APITestCase):
         )
         self.assertEqual(bad_reg.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # 3. Valid OTP creates user + UserProfile
+        # 3. Valid OTP creates user with Full Name and auto-generated username
         res = self.client.post(
             "/api/register/",
             {
-                "first_name": "New",
-                "last_name": "Buyer",
-                "phone": "9876543210",
-                "username": "newbuyer",
+                "full_name": "New Buyer",
                 "email": "newbuyer@example.com",
                 "password": "password123",
                 "otp": otp_obj.otp,
@@ -80,9 +77,10 @@ class GroceryPlatformAPITests(APITestCase):
             format="json",
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        created_user = User.objects.get(username="newbuyer")
+        created_user = User.objects.get(email="newbuyer@example.com")
         self.assertEqual(created_user.first_name, "New")
-        self.assertEqual(created_user.profile.phone, "9876543210")
+        self.assertEqual(created_user.last_name, "Buyer")
+        self.assertTrue(created_user.username.startswith("newbuyer"))
 
         # 4. Duplicate email rejected on send OTP for register
         dup = self.client.post(
@@ -122,6 +120,59 @@ class GroceryPlatformAPITests(APITestCase):
         )
         self.assertEqual(login_res.status_code, status.HTTP_200_OK)
         self.assertIn("access", login_res.data)
+
+    def test_profile_retrieve_and_update(self):
+        self.authenticate(self.user)
+        get_res = self.client.get("/api/profile/")
+        self.assertEqual(get_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_res.data["username"], "vicky")
+
+        patch_res = self.client.patch(
+            "/api/profile/",
+            {"first_name": "Vicky", "last_name": "More", "phone": "9988776655"},
+            format="json",
+        )
+        self.assertEqual(patch_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_res.data["first_name"], "Vicky")
+        self.assertEqual(patch_res.data["phone"], "9988776655")
+
+    def test_logout_blacklists_refresh_token(self):
+        login_res = self.client.post(
+            "/api/token/",
+            {"username": "vicky", "password": "strongpassword123"},
+        )
+        refresh_token = login_res.data["refresh"]
+        self.authenticate(self.user)
+
+        logout_res = self.client.post(
+            "/api/logout/",
+            {"refresh": refresh_token},
+            format="json",
+        )
+        self.assertEqual(logout_res.status_code, status.HTTP_200_OK)
+
+        # Blacklisted refresh token cannot be used again
+        refresh_res = self.client.post(
+            "/api/token/refresh/",
+            {"refresh": refresh_token},
+            format="json",
+        )
+        self.assertEqual(refresh_res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_otp_resend_cooldown_enforced(self):
+        first = self.client.post(
+            "/api/otp/send/",
+            {"email": "cooldown@example.com"},
+            format="json",
+        )
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+
+        second = self.client.post(
+            "/api/otp/send/",
+            {"email": "cooldown@example.com"},
+            format="json",
+        )
+        self.assertEqual(second.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
     def test_jwt_login_with_username_and_email(self):
         # Login with username

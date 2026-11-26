@@ -6,10 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ShoppingBag, ShieldCheck, Zap, Leaf, CheckCircle2 } from "lucide-react";
 
 const Register = () => {
-	const [firstName, SetFirstName] = useState("");
-	const [lastName, SetLastName] = useState("");
-	const [phone, SetPhone] = useState("");
-	const [username, SetUsername] = useState("");
+	const [fullName, SetFullName] = useState("");
 	const [email, SetEmail] = useState("");
 	const [password, SetPassword] = useState("");
 	const [otp, SetOtp] = useState("");
@@ -26,11 +23,9 @@ const Register = () => {
 		Seterror({});
 		SetInfo("");
 
-		if (!firstName.trim() || !phone.trim() || !username.trim() || !email.trim() || password.length < 8) {
+		if (!fullName.trim() || !email.trim() || password.length < 8) {
 			Seterror({
-				first_name: !firstName.trim() ? "First name is required." : "",
-				phone: !phone.trim() ? "Phone number is required." : "",
-				username: !username.trim() ? "Username is required." : "",
+				full_name: !fullName.trim() ? "Full name is required." : "",
 				email: !email.trim() ? "Email is required." : "",
 				password: password.length < 8 ? "Password must be at least 8 characters." : "",
 			});
@@ -58,10 +53,7 @@ const Register = () => {
 		Seterror({});
 
 		const userData = {
-			first_name: firstName,
-			last_name: lastName,
-			phone,
-			username,
+			full_name: fullName,
 			email,
 			password,
 			otp,
@@ -82,7 +74,7 @@ const Register = () => {
 
 	return (
 		<div className="min-vh-100 d-flex align-items-center justify-content-center py-4 px-3" style={{ background: "#f1f5f9" }}>
-			<div className="container" style={{ maxWidth: "980px" }}>
+			<div className="container" style={{ maxWidth: "940px" }}>
 				<div className="fm-card overflow-hidden shadow-lg border-0" style={{ borderRadius: "24px" }}>
 					<div className="row g-0">
 						{/* LEFT VISUAL SHOWCASE PANEL */}
@@ -131,12 +123,12 @@ const Register = () => {
 						</div>
 
 						{/* RIGHT FORM PANEL */}
-						<div className="col-lg-7 bg-white p-4 p-md-5">
+						<div className="col-lg-7 bg-white p-4 p-md-5 d-flex flex-column justify-content-center">
 							<div className="d-flex justify-content-between align-items-center mb-4">
 								<div>
 									<h3 className="fw-bold mb-1">Create Account</h3>
 									<p className="text-muted small mb-0">
-										{otpSent ? "Step 2 of 2: Enter Email OTP" : "Step 1 of 2: Your Details"}
+										{otpSent ? "Step 2 of 2: Enter Email OTP" : "Step 1 of 2: Quick 30-second signup"}
 									</p>
 								</div>
 								<span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-semibold">
@@ -164,69 +156,18 @@ const Register = () => {
 							)}
 
 							<form onSubmit={otpSent ? handelRegistration : handleSendOtp}>
-								<div className="row g-2 mb-3">
-									<div className="col-6">
-										<div className="form-floating">
-											<input
-												type="text"
-												className="form-control"
-												id="firstName"
-												placeholder="First Name"
-												value={firstName}
-												disabled={otpSent}
-												onChange={(e) => SetFirstName(e.target.value)}
-											/>
-											<label htmlFor="firstName">First Name</label>
-										</div>
-										{error.first_name && <small className="text-danger">{error.first_name}</small>}
-									</div>
-									<div className="col-6">
-										<div className="form-floating">
-											<input
-												type="text"
-												className="form-control"
-												id="lastName"
-												placeholder="Last Name"
-												value={lastName}
-												disabled={otpSent}
-												onChange={(e) => SetLastName(e.target.value)}
-											/>
-											<label htmlFor="lastName">Last Name</label>
-										</div>
-									</div>
-								</div>
-
-								<div className="row g-2 mb-3">
-									<div className="col-md-6">
-										<div className="form-floating">
-											<input
-												type="tel"
-												className="form-control"
-												id="phone"
-												placeholder="Phone Number"
-												value={phone}
-												disabled={otpSent}
-												onChange={(e) => SetPhone(e.target.value)}
-											/>
-											<label htmlFor="phone">Phone Number</label>
-										</div>
-										{error.phone && <small className="text-danger">{error.phone}</small>}
-									</div>
-									<div className="col-md-6">
-										<div className="form-floating">
-											<input
-												type="text"
-												className="form-control"
-												id="username"
-												placeholder="Username"
-												value={username}
-												disabled={otpSent}
-												onChange={(e) => SetUsername(e.target.value)}
-											/>
-											<label htmlFor="username">Username</label>
-										</div>
-										{error.username && <small className="text-danger">{error.username}</small>}
-									</div>
+								<div className="form-floating mb-3">
+									<input
+										type="text"
+										className="form-control"
+										id="fullName"
+										placeholder="Full Name"
+										value={fullName}
+										disabled={otpSent}
+										onChange={(e) => SetFullName(e.target.value)}
+									/>
+									<label htmlFor="fullName">Full Name</label>
+									{error.full_name && <small className="text-danger">{error.full_name}</small>}
 								</div>
 
 								<div className="form-floating mb-3">
@@ -253,7 +194,7 @@ const Register = () => {
 										disabled={otpSent}
 										onChange={(e) => SetPassword(e.target.value)}
 									/>
-									<label htmlFor="password">Password (min 8 characters)</label>
+									<label htmlFor="password">Create Password (min 8 chars)</label>
 									{error.password && <small className="text-danger">{error.password}</small>}
 								</div>
 

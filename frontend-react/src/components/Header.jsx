@@ -2,13 +2,22 @@ import { useContext } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ShoppingBag, ShoppingCart, Package, LogOut, Home } from "lucide-react";
 import { AuthContext } from "./AuthProvider";
+import axiosInstance from "./axiosInstance";
 
 const Header = () => {
   const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const logout = () => {
+  const logout = async () => {
+    const refresh = localStorage.getItem("refreshToken");
+    if (refresh) {
+      try {
+        await axiosInstance.post("/logout/", { refresh });
+      } catch {
+        // Proceed with local logout even if token was already expired
+      }
+    }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setIsLoggedIn(false);
